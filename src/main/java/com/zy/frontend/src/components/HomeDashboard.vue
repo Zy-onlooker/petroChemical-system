@@ -44,7 +44,7 @@ export default {
       sensorData: {}, // 传感器卡片数据
       dataStream: [], // 实时数据流
       wsConnected: false, // WS连接状态
-      reconnectInterval: 5000, // 重连间隔（5秒）
+      reconnectInterval: 3000, // 重连间隔（3秒）
       maxStreamLength: 20 // 数据流最大条数
     }
   },
@@ -93,11 +93,21 @@ export default {
             const data = JSON.parse(event.data)
             console.log('📥 收到WS数据:', data)
 
-            // 更新传感器卡片数据
-            this.sensorData = { ...data }
-
-            // 更新实时数据流（遍历所有传感器）
+            // 过滤掉pump_primary传感器数据（核心修改1）
+            const filteredSensorData = {}
             Object.entries(data).forEach(([sensorId, sensorInfo]) => {
+              if (sensorId !== 'pump_primary') {
+                filteredSensorData[sensorId] = sensorInfo
+              }
+            })
+            // 更新传感器卡片数据（仅保留非pump_primary的数据）
+            this.sensorData = { ...filteredSensorData }
+
+            // 更新实时数据流（遍历所有传感器，过滤pump_primary）
+            Object.entries(data).forEach(([sensorId, sensorInfo]) => {
+              // 跳过pump_primary传感器（核心修改1）
+              if (sensorId === 'pump_primary') return
+
               // 构造数据流项（适配你的sensorData结构）
               const streamItem = {
                 time: this.formatTime(sensorInfo?.data?.timestamp),
@@ -194,7 +204,7 @@ export default {
 }
 
 .real-time-monitoring h3 {
-  color: #1890ff;
+  color: darkgrey;
   margin-bottom: 1rem;
   font-size: 1.2rem;
   display: flex;
@@ -215,7 +225,7 @@ export default {
 }
 
 .data-stream {
-  max-height: 300px;
+  max-height: 500px;
   overflow-y: auto;
   border: 1px solid #e8e8e8;
   border-radius: 6px;
@@ -266,6 +276,10 @@ export default {
   .data-item {
     grid-template-columns: 80px 120px 80px 60px;
     font-size: 0.9rem;
+  }
+  /* 移动端同步延长数据流高度 */
+  .data-stream {
+    max-height: 400px;
   }
 }
 </style>
